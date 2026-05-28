@@ -2,6 +2,7 @@ import { Pet } from './pet.js';
 import { render } from './renderer.js';
 import { applyGravity } from './physics.js';
 import { setupInput } from './input.js';
+import { updateMood } from './state.js';
 
 // 获取 Canvas 和绘制上下文
 const canvas = document.getElementById('pet-canvas');
@@ -26,6 +27,9 @@ function gameLoop(timestamp) {
   // delta time（秒）— 距上一帧过了多久，上限 0.1 防止切标签页后瞬移
   const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
   lastTime = timestamp;
+
+  // 情绪状态机
+  updateMood(pet, dt);
 
   // 更新动画
   pet.updateAnimation(dt);
