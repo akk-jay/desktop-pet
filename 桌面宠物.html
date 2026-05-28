@@ -30,6 +30,7 @@ html, body {
 <body>
 <canvas id="pet-canvas"></canvas>
 <script>
+"use strict";
 // Physics
 const GRAVITY = 500;              // px/s² — 重力加速度
 const GROUND_FRICTION = 0.8;      // 落地后水平速度的保留比例
@@ -250,16 +251,6 @@ const SPRITES = {
 };
 
 
-  WALK_SPEED,
-  WALK_CHANGE_INTERVAL,
-  BLINK_INTERVAL_MIN,
-  BLINK_INTERVAL_MAX,
-  BLINK_DURATION,
-  PET_SIZE,
-  IDLE_FLOAT_PERIOD,
-  IDLE_FLOAT_AMPLITUDE,
-  FRAME_DURATION,
-} from './constants.js';
 
 class Pet {
   constructor(canvasWidth, canvasHeight) {
@@ -468,12 +459,6 @@ function applyGravity(pet, dt, canvasHeight) {
 }
 
 
-  CLICK_ANGER_THRESHOLD,
-  CLICK_ANGER_WINDOW,
-  BORED_TIMEOUT,
-  ANGER_COOLDOWN,
-  HAPPY_COOLDOWN,
-} from './constants.js';
 
 /**
  * 每帧调用，根据互动历史更新宠物的情绪状态

@@ -1,7 +1,6 @@
 // 将 ES 模块项目打包成单文件 HTML，支持双击直接运行
 import { readFileSync, writeFileSync } from 'fs';
 
-// 依赖顺序：被依赖的文件必须先加载
 const files = [
   'src/constants.js',
   'src/sprites.js',
@@ -15,18 +14,44 @@ const files = [
 
 const css = readFileSync('styles/main.css', 'utf-8');
 
-// 拼接所有 JS，去掉 import/export
 let js = '';
 for (const file of files) {
   let content = readFileSync(file, 'utf-8');
-  // 去掉 import 语句
-  content = content.replace(/^import\s+.*$/gm, '');
-  // 去掉 export 关键字（保留后面的内容）
-  content = content.replace(/^export\s+/gm, '');
+
+  // 去掉多行 import 语句（包括跨行的）
+  content = content.replace(/import\s*\{[^}]*\}\s*from\s*['"][^'"]+['"]\s*;?/g, '');
+  // 去掉单行 import 语句
+  content = content.replace(/import\s+\w+\s+from\s*['"][^'"]+['"]\s*;?/g, '');
+  // 去掉 import '...' 或 import "..." 形式的副作用导入
+  content = content.replace(/import\s+['"][^'"]+['"]\s*;?/g, '');
+
+  // 去掉 export { ... } 语句
+  content = content.replace(/export\s*\{[^}]*\}\s*;?/g, '');
+  // 去掉 export default
+  content = content.replace(/export\s+default\s+/g, '');
+  // 去掉 export（保留后面的 class/const/function）
+  content = content.replace(/\bexport\s+(?=class\b|const\b|function\b|let\b|var\b)/g, '');
+
   js += content + '\n';
 }
 
-// CSS 中把背景色改透明（适合桌宠覆盖在桌面上）
+// 验证语法
+try {
+  new Function('"use strict";\n' + js);
+  console.log('JS syntax: OK');
+} catch (e) {
+  console.log('JS syntax ERROR:', e.message);
+  // 写入临时文件用 node --check 定位
+  writeFileSync('_debug.js', '"use strict";\n' + js);
+  const { execSync } = require('child_process');
+  try {
+    execSync('node --check _debug.js', { shell: true, stdio: 'pipe' });
+  } catch (e2) {
+    console.log(e2.stderr ? e2.stderr.toString().trim() : e2.message);
+  }
+  process.exit(1);
+}
+
 const finalCss = css.replace('background: #87CEEB;', 'background: transparent;');
 
 const html = `<!DOCTYPE html>
@@ -40,6 +65,7 @@ const html = `<!DOCTYPE html>
 <body>
 <canvas id="pet-canvas"></canvas>
 <script>
+"use strict";
 ${js}
 <\/script>
 </body>
