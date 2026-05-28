@@ -1,6 +1,7 @@
 import { Pet } from './pet.js';
 import { render } from './renderer.js';
 import { applyGravity } from './physics.js';
+import { setupInput } from './input.js';
 
 // 获取 Canvas 和绘制上下文
 const canvas = document.getElementById('pet-canvas');
@@ -14,8 +15,9 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
-// 创建宠物实例
+// 创建宠物实例 + 绑定输入
 const pet = new Pet(canvas.width, canvas.height);
+setupInput(canvas, pet);
 
 // 游戏主循环
 let lastTime = 0;
