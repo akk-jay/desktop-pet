@@ -1,5 +1,6 @@
 import { Pet } from './pet.js';
 import { render } from './renderer.js';
+import { applyGravity } from './physics.js';
 
 // 获取 Canvas 和绘制上下文
 const canvas = document.getElementById('pet-canvas');
@@ -30,9 +31,9 @@ function gameLoop(timestamp) {
   // 走路 AI
   pet.updateWalk(dt, canvas.width);
 
-  // 更新位置
+  // 更新位置（水平由走路控制，垂直由物理引擎控制）
   pet.x += pet.vx * dt;
-  pet.y += pet.vy * dt;
+  applyGravity(pet, dt, canvas.height);
 
   // 渲染
   render(ctx, pet, canvas.width, canvas.height);
