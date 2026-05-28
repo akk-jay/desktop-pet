@@ -3,18 +3,33 @@ import { render } from './renderer.js';
 import { applyGravity, clampToScreen } from './physics.js';
 import { setupInput } from './input.js';
 import { updateMood } from './state.js';
+import { IDLE_FLOAT_AMPLITUDE } from './constants.js';
 
 const canvas = document.getElementById('pet-canvas');
 const ctx = canvas.getContext('2d');
 
-function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
+const CANVAS_W = 70;
+const CANVAS_H = 70;
+canvas.width = CANVAS_W;
+canvas.height = CANVAS_H;
 
-const pet = new Pet(canvas.width, canvas.height);
+let screenW = 1920;
+let screenH = 1080;
+
+async function initScreenBounds() {
+  if (window.petAPI) {
+    const bounds = await window.petAPI.getScreenBounds();
+    screenW = bounds.width;
+    screenH = bounds.height;
+
+    window.petAPI.onScreenBoundsChanged((newBounds) => {
+      screenW = newBounds.width;
+      screenH = newBounds.height;
+    });
+  }
+}
+
+const pet = new Pet(screenW, screenH);
 setupInput(canvas, pet);
 
 let lastTime = 0;
@@ -23,30 +38,26 @@ function gameLoop(timestamp) {
   const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
   lastTime = timestamp;
 
-  // 让状态机能感知屏幕宽度（用于判断是否靠墙）
-  pet._canvasWidth = canvas.width;
+  pet._canvasWidth = screenW;
 
-  // 情绪 + 体力状态机
   updateMood(pet, dt);
-
-  // 更新动画
   pet.updateAnimation(dt);
-
-  // 走路 AI（idle 状态）
-  pet.updateWalk(dt, canvas.width);
-
-  // 体力消耗/恢复
+  pet.updateWalk(dt, screenW);
   pet.updateEnergy(dt);
 
-  // 位置更新
   pet.x += pet.vx * dt;
-  applyGravity(pet, dt, canvas.height);
-  clampToScreen(pet, canvas.width);
+  applyGravity(pet, dt, screenH);
+  clampToScreen(pet, screenW);
 
-  // 渲染
-  render(ctx, pet, canvas.width, canvas.height);
+  if (window.petAPI) {
+    window.petAPI.updatePosition(pet.x, pet.y - IDLE_FLOAT_AMPLITUDE);
+  }
+
+  render(ctx, pet, CANVAS_W, CANVAS_H);
 
   requestAnimationFrame(gameLoop);
 }
 
-requestAnimationFrame(gameLoop);
+initScreenBounds().then(() => {
+  requestAnimationFrame(gameLoop);
+});

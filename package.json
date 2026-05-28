@@ -3,12 +3,44 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
+  "main": "electron/main.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "electron .",
+    "electron:build": "vite build && electron-builder --win",
+    "electron:build:portable": "vite build && electron-builder --win portable"
   },
   "devDependencies": {
+    "electron": "^42.3.0",
+    "electron-builder": "^26.8.1",
     "vite": "^5.4.0"
+  },
+  "build": {
+    "appId": "com.desktop-pet.app",
+    "productName": "桌面宠物",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron/**/*",
+      "dist/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/tray-icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
   }
 }
