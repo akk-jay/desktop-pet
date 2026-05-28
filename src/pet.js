@@ -86,4 +86,58 @@ export class Pet {
       this.frameIndex++;
     }
   }
+
+  /**
+   * 走路 AI：随机改变方向和状态
+   * @param {number} dt — delta time in seconds
+   * @param {number} canvasWidth — world width
+   */
+  updateWalk(dt, canvasWidth) {
+    // 非待机状态或正在拖拽时，不走路
+    if (this.mood !== 'idle' || this.isDragging) {
+      if (this.animation === 'walk') {
+        this.animation = 'idle';
+        this.vx = 0;
+      }
+      return;
+    }
+
+    this.walkTimer -= dt * 1000;
+
+    if (this.walkTimer <= 0) {
+      const r = Math.random();
+      if (r < 0.4) {
+        // 40% 概率停下来
+        this.walkDirection = 0;
+        this.animation = 'idle';
+        this.vx = 0;
+      } else if (r < 0.7) {
+        // 30% 概率向左走
+        this.walkDirection = -1;
+        this.facingRight = false;
+        this.animation = 'walk';
+        this.vx = -WALK_SPEED;
+      } else {
+        // 30% 概率向右走
+        this.walkDirection = 1;
+        this.facingRight = true;
+        this.animation = 'walk';
+        this.vx = WALK_SPEED;
+      }
+      this.walkTimer = 1000 + Math.random() * 3000;
+    }
+
+    // 边界检测：走到屏幕边缘就回头
+    if (this.x <= 0) {
+      this.walkDirection = 1;
+      this.facingRight = true;
+      this.vx = WALK_SPEED;
+      this.walkTimer = 1000 + Math.random() * 2000;
+    } else if (this.x + PET_SIZE >= canvasWidth) {
+      this.walkDirection = -1;
+      this.facingRight = false;
+      this.vx = -WALK_SPEED;
+      this.walkTimer = 1000 + Math.random() * 2000;
+    }
+  }
 }

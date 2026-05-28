@@ -27,6 +27,9 @@ function gameLoop(timestamp) {
   // 更新动画
   pet.updateAnimation(dt);
 
+  // 走路 AI
+  pet.updateWalk(dt, canvas.width);
+
   // 更新位置
   pet.x += pet.vx * dt;
   pet.y += pet.vy * dt;
