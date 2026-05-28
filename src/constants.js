@@ -27,3 +27,9 @@ export const PET_SIZE = PET_PIXEL_SIZE * PET_SCALE; // 实际渲染大小 = 64px
 // Idle
 export const IDLE_FLOAT_AMPLITUDE = 3;   // px — 待机时上下浮动的幅度
 export const IDLE_FLOAT_PERIOD = 2000;   // ms — 浮动一个完整周期的时间
+
+// Energy
+export const MAX_ENERGY = 100;           // 最大体力值
+export const ENERGY_DRAIN_RATE = 8;      // 每秒走路消耗的体力
+export const ENERGY_RECOVER_RATE = 15;   // 每秒休息恢复的体力
+export const ENERGY_LOW_THRESHOLD = 0;   // 体力低于此值进入休息

@@ -61,24 +61,30 @@ const PET_SIZE = PET_PIXEL_SIZE * PET_SCALE; // 实际渲染大小 = 64px
 const IDLE_FLOAT_AMPLITUDE = 3;   // px — 待机时上下浮动的幅度
 const IDLE_FLOAT_PERIOD = 2000;   // ms — 浮动一个完整周期的时间
 
+// Energy
+const MAX_ENERGY = 100;           // 最大体力值
+const ENERGY_DRAIN_RATE = 8;      // 每秒走路消耗的体力
+const ENERGY_RECOVER_RATE = 15;   // 每秒休息恢复的体力
+const ENERGY_LOW_THRESHOLD = 0;   // 体力低于此值进入休息
+
 // ============================================================
-// 像素精灵数据 — 16×16 的二维数组
-// 颜色编号: 0=透明  1=身体主色  2=身体暗色  3=眼睛白  4=强调色
+// 青苹果精灵数据 — 16×16 二维数组
+// 颜色: 0=透明  1=果身绿  2=暗绿(阴影/叶子)  3=眼白  4=棕色(梗)
 // ============================================================
 
-// --- 待机帧0 (站立，正常比例) ---
+// --- 待机帧0 (圆润站立) ---
 const IDLE_0 = [
-  [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
-  [0,0,0,0,0,1,1,2,2,1,1,0,0,0,0,0],
-  [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
+  [0,0,0,0,0,0,0,4,4,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,4,1,1,4,0,0,0,0,0,0],
+  [0,0,0,0,0,2,1,1,1,1,2,0,0,0,0,0],
+  [0,0,0,0,1,1,2,2,2,2,1,1,0,0,0,0],
   [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
   [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
-  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
   [0,1,2,2,2,3,3,2,2,3,3,2,2,2,1,0],
   [0,1,2,2,2,3,3,2,2,3,3,2,2,2,1,0],
   [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
-  [0,1,2,2,2,2,4,4,4,4,2,2,2,2,1,0],
-  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,0,1,2,2,2,4,4,4,4,2,2,2,1,0,0],
   [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
   [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
   [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
@@ -86,59 +92,59 @@ const IDLE_0 = [
   [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
 ];
 
-// --- 待机帧1 (上下浮动时稍微压扁) ---
+// --- 待机帧1 (微微压扁，浮动用) ---
 const IDLE_1 = [
   [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,4,4,0,0,0,0,0,0,0],
+  [0,0,0,0,0,2,1,1,1,1,2,0,0,0,0,0],
   [0,0,0,0,1,1,1,2,2,1,1,1,0,0,0,0],
-  [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
-  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
-  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
-  [0,1,2,2,2,3,3,2,2,3,3,2,2,2,1,0],
-  [0,1,2,2,2,3,3,2,2,3,3,2,2,2,1,0],
-  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
-  [0,1,2,2,2,4,4,4,4,4,4,2,2,2,1,0],
-  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
-  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
-  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
-  [0,0,0,1,1,2,2,2,2,2,2,1,1,0,0,0],
-  [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-];
-
-// --- 眨眼帧 (眼睛闭上) ---
-const BLINK_FRAME = [
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-  [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
-  [0,0,0,0,1,1,1,2,2,1,1,1,0,0,0,0],
-  [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
-  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
-  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
-  [0,1,2,2,2,1,1,2,2,1,1,2,2,2,1,0],
-  [0,1,2,2,2,1,1,2,2,1,1,2,2,2,1,0],
-  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
-  [0,1,2,2,2,2,4,4,4,4,2,2,2,2,1,0],
-  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
-  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
-  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
-  [0,0,0,1,1,2,2,2,2,2,2,1,1,0,0,0],
-  [0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-];
-
-// --- 开心帧 (眼睛变成 ^^) ---
-const HAPPY_FRAME = [
-  [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
-  [0,0,0,0,0,1,1,2,2,1,1,0,0,0,0,0],
   [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
   [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
   [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
-  [0,1,2,2,3,2,2,2,2,2,2,3,2,2,1,0],
+  [0,0,1,2,2,3,3,2,2,3,3,2,2,1,0,0],
+  [0,0,1,2,2,3,3,2,2,3,3,2,2,1,0,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,0,1,2,2,4,4,4,4,4,4,2,2,1,0,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
+  [0,0,0,0,1,1,2,2,2,2,1,1,0,0,0,0],
+  [0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0],
+];
+
+// --- 眨眼帧 ---
+const BLINK_FRAME = [
+  [0,0,0,0,0,0,0,4,4,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,4,1,1,4,0,0,0,0,0,0],
+  [0,0,0,0,0,2,1,1,1,1,2,0,0,0,0,0],
+  [0,0,0,0,1,1,2,2,2,2,1,1,0,0,0,0],
+  [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,1,2,2,2,1,1,2,2,1,1,2,2,2,1,0],
+  [0,1,2,2,2,1,1,2,2,1,1,2,2,2,1,0],
+  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,0,1,2,2,2,4,4,4,4,2,2,2,1,0,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
+  [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
+  [0,0,0,0,0,1,1,2,2,1,1,0,0,0,0,0],
+  [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
+];
+
+// --- 开心帧 (^^ 眼) ---
+const HAPPY_FRAME = [
+  [0,0,0,0,0,0,0,4,4,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,4,1,1,4,0,0,0,0,0,0],
+  [0,0,0,0,0,2,1,1,1,1,2,0,0,0,0,0],
+  [0,0,0,0,1,1,2,2,2,2,1,1,0,0,0,0],
+  [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,0,1,2,3,2,2,2,2,2,2,3,2,1,0,0],
   [0,1,2,2,2,3,2,2,2,2,3,2,2,2,1,0],
   [0,1,2,2,2,2,3,3,3,3,2,2,2,2,1,0],
   [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
-  [0,1,2,2,2,2,4,4,4,4,2,2,2,2,1,0],
-  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,0,1,2,2,2,4,4,4,4,2,2,2,1,0,0],
   [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
   [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
   [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
@@ -146,19 +152,19 @@ const HAPPY_FRAME = [
   [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
 ];
 
-// --- 生气帧 (眼睛变成 ><，嘴巴锯齿) ---
+// --- 生气帧 (>< 眼 + 锯齿嘴) ---
 const ANGRY_FRAME = [
-  [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
-  [0,0,0,0,0,1,1,2,2,1,1,0,0,0,0,0],
-  [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
+  [0,0,0,0,0,0,0,4,4,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,4,1,1,4,0,0,0,0,0,0],
+  [0,0,0,0,0,2,1,1,1,1,2,0,0,0,0,0],
+  [0,0,0,0,1,1,2,2,2,2,1,1,0,0,0,0],
   [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
   [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
-  [0,1,2,2,3,2,3,2,2,3,2,3,2,2,1,0],
+  [0,0,1,2,3,2,3,2,2,3,2,3,2,1,0,0],
   [0,1,2,2,2,3,2,2,2,2,3,2,2,2,1,0],
   [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
   [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
-  [0,1,2,2,4,2,4,2,4,2,4,2,2,2,1,0],
-  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,0,1,2,4,2,4,2,4,2,4,2,2,1,0,0],
   [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
   [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
   [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
@@ -166,42 +172,81 @@ const ANGRY_FRAME = [
   [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
 ];
 
-// --- 无聊帧 (眼睛半闭，嘴巴大张打哈欠) ---
-const BORED_FRAME = [
-  [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
-  [0,0,0,0,0,1,1,2,2,1,1,0,0,0,0,0],
-  [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
+// --- 靠左墙休息 (苹果左倾) ---
+const REST_LEFT = [
+  [0,0,0,0,0,0,0,4,4,0,0,0,0,0,0,0],
+  [0,0,0,0,0,4,1,1,1,1,0,0,0,0,0,0],
+  [0,0,0,0,2,1,2,2,2,2,1,0,0,0,0,0],
+  [0,0,0,1,1,2,2,2,2,2,2,1,0,0,0,0],
   [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
   [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,1,2,2,2,1,1,2,2,2,2,2,2,2,1,0],
+  [0,1,2,2,1,1,2,2,2,2,2,2,2,2,1,0],
   [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
-  [0,1,2,2,2,1,1,2,2,1,1,2,2,2,1,0],
-  [0,1,2,2,2,1,1,2,2,1,1,2,2,2,1,0],
+  [0,1,2,2,1,1,2,2,2,2,2,2,2,2,1,0],
   [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
-  [0,1,2,2,2,2,4,4,4,4,2,2,2,2,1,0],
-  [0,1,2,2,2,2,4,4,4,4,2,2,2,2,1,0],
-  [0,1,2,2,2,2,4,4,4,4,2,2,2,2,1,0],
   [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
   [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
-  [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
-  [0,0,0,0,0,1,1,2,2,1,1,0,0,0,0,0],
+  [0,0,0,0,1,1,2,2,2,2,1,1,0,0,0,0],
+  [0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0],
 ];
 
-// --- 走路帧0 (站立 = 走路起点) ---
+// --- 靠右墙休息 (苹果右倾) ---
+const REST_RIGHT = [
+  [0,0,0,0,0,0,0,4,4,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,1,1,1,1,4,0,0,0,0,0],
+  [0,0,0,0,0,1,2,2,2,2,1,2,0,0,0,0],
+  [0,0,0,1,2,2,2,2,2,2,2,1,1,0,0,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,1,0,0,0],
+  [0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,1,2,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,1,2,2,2,2,2,2,1,1,2,2,2,2,1,0],
+  [0,1,2,2,2,2,2,2,2,2,1,1,2,2,1,0],
+  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,1,2,2,2,2,2,2,2,2,1,1,2,2,1,0],
+  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
+  [0,0,0,0,1,1,2,2,2,2,1,1,0,0,0,0],
+  [0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0],
+];
+
+// --- 纯苹果 (没表情，被冷落时变成这样) ---
+const STILL = [
+  [0,0,0,0,0,0,0,4,4,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,4,1,1,4,0,0,0,0,0,0],
+  [0,0,0,0,0,2,1,1,1,1,2,0,0,0,0,0],
+  [0,0,0,0,1,1,2,2,2,2,1,1,0,0,0,0],
+  [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
+  [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
+  [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
+  [0,0,0,0,0,1,1,2,2,1,1,0,0,0,0,0],
+  [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
+];
+
+// --- 走路帧 (4帧循环) ---
 const WALK_0 = IDLE_0;
 
-// --- 走路帧1 (左脚迈出，身体右倾) ---
 const WALK_1 = [
-  [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
-  [0,0,0,0,0,1,1,2,2,1,1,0,0,0,0,0],
-  [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
+  [0,0,0,0,0,0,0,4,4,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,4,1,1,4,0,0,0,0,0,0],
+  [0,0,0,0,0,2,1,1,1,1,2,0,0,0,0,0],
+  [0,0,0,0,1,1,2,2,2,2,1,1,0,0,0,0],
   [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
   [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
-  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
   [0,1,2,2,2,3,3,2,2,3,3,2,2,2,1,0],
   [0,1,2,2,2,3,3,2,2,3,3,2,2,2,1,0],
   [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
-  [0,1,2,2,2,2,2,4,4,4,4,2,2,2,1,0],
-  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,0,1,2,2,2,2,4,4,4,4,2,2,1,0,0],
   [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
   [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
   [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
@@ -209,22 +254,20 @@ const WALK_1 = [
   [0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0],
 ];
 
-// --- 走路帧2 (回到站立) ---
 const WALK_2 = IDLE_0;
 
-// --- 走路帧3 (右脚迈出，身体左倾) ---
 const WALK_3 = [
-  [0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0],
-  [0,0,0,0,0,1,1,2,2,1,1,0,0,0,0,0],
-  [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
+  [0,0,0,0,0,0,0,4,4,0,0,0,0,0,0,0],
+  [0,0,0,0,0,0,4,1,1,4,0,0,0,0,0,0],
+  [0,0,0,0,0,2,1,1,1,1,2,0,0,0,0,0],
+  [0,0,0,0,1,1,2,2,2,2,1,1,0,0,0,0],
   [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
   [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
-  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
   [0,1,2,2,2,3,3,2,2,3,3,2,2,2,1,0],
   [0,1,2,2,2,3,3,2,2,3,3,2,2,2,1,0],
   [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
-  [0,1,2,2,2,2,4,4,4,4,2,2,2,2,1,0],
-  [0,1,2,2,2,2,2,2,2,2,2,2,2,2,1,0],
+  [0,0,1,2,2,4,4,4,4,2,2,2,2,1,0,0],
   [0,0,1,2,2,2,2,2,2,2,2,2,2,1,0,0],
   [0,0,0,1,2,2,2,2,2,2,2,2,1,0,0,0],
   [0,0,0,0,1,2,2,2,2,2,2,1,0,0,0,0],
@@ -234,19 +277,20 @@ const WALK_3 = [
 
 // --- 颜色映射 ---
 const COLORS = {
-  1: '#8B5CF6',  // 身体主色（紫色）
-  2: '#7C3AED',  // 身体暗色（深紫，做体积感）
-  3: '#FFFFFF',  // 眼睛白色
-  4: '#FDE047',  // 嘴巴/强调色（黄色）
+  1: '#8BC34A',  // 苹果绿
+  2: '#558B2F',  // 深绿（阴影 / 叶子）
+  3: '#FFFFFF',  // 眼白
+  4: '#795548',  // 棕色（苹果梗）
 };
 
-// --- 所有精灵帧的集合 ---
+// --- 所有精灵帧集合 ---
 const SPRITES = {
   idle: [IDLE_0, IDLE_1],
   blink: [BLINK_FRAME],
   happy: [HAPPY_FRAME],
   angry: [ANGRY_FRAME],
-  bored: [BORED_FRAME],
+  rest: [REST_LEFT, REST_RIGHT],   // [0]=靠左, [1]=靠右
+  still: [STILL],
   walk: [WALK_0, WALK_1, WALK_2, WALK_3],
 };
 
@@ -260,13 +304,13 @@ class Pet {
     this.vy = 0;
 
     // Animation
-    this.animation = 'idle';       // 'idle' | 'walk' | 'blink' | 'happy' | 'angry' | 'bored'
+    this.animation = 'idle';
     this.frameIndex = 0;
     this.frameTimer = 0;
     this.facingRight = true;
 
     // Walk AI
-    this.walkDirection = 0;        // -1 left, 0 still, 1 right
+    this.walkDirection = 0;
     this.walkTimer = 0;
 
     // Blink
@@ -274,10 +318,10 @@ class Pet {
       + Math.random() * (BLINK_INTERVAL_MAX - BLINK_INTERVAL_MIN);
     this.isBlinking = false;
 
-    // Mood
-    this.mood = 'idle';            // 'idle' | 'happy' | 'angry' | 'bored'
+    // Mood: 'idle' | 'happy' | 'angry' | 'resting' | 'still'
+    this.mood = 'idle';
     this.moodTimer = 0;
-    this.clickTimes = [];          // 记录最近的点击时间戳
+    this.clickTimes = [];
     this.lastInteractionTime = Date.now();
 
     // Drag state
@@ -287,14 +331,17 @@ class Pet {
 
     // Idle float
     this.floatOffset = 0;
+
+    // Energy system
+    this.energy = MAX_ENERGY;
+    this.restSide = 0; // 0=左墙, 1=右墙
   }
 
   /**
    * 更新动画状态和帧
-   * @param {number} dt — delta time in seconds
    */
   updateAnimation(dt) {
-    // 待机浮动：用 sin 波做上下浮动
+    // 纯苹果和休息状态不需要浮动
     if (this.animation === 'idle') {
       this.floatOffset = Math.sin(Date.now() / (IDLE_FLOAT_PERIOD / (Math.PI * 2)))
         * IDLE_FLOAT_AMPLITUDE;
@@ -302,7 +349,11 @@ class Pet {
       this.floatOffset = 0;
     }
 
-    // 眨眼计时器
+    // 休息和纯苹果状态不眨眼
+    if (this.mood === 'resting' || this.mood === 'still') {
+      return;
+    }
+
     if (this.isBlinking) {
       this.blinkTimer -= dt * 1000;
       if (this.blinkTimer <= 0) {
@@ -320,22 +371,18 @@ class Pet {
       }
     }
 
-    // 帧切换
     this.frameTimer += dt * 1000;
-    const duration = FRAME_DURATION;
-    if (this.frameTimer >= duration) {
-      this.frameTimer -= duration;
+    if (this.frameTimer >= FRAME_DURATION) {
+      this.frameTimer -= FRAME_DURATION;
       this.frameIndex++;
     }
   }
 
   /**
    * 走路 AI：随机改变方向和状态
-   * @param {number} dt — delta time in seconds
-   * @param {number} canvasWidth — world width
    */
   updateWalk(dt, canvasWidth) {
-    // 非待机状态或正在拖拽时，不走路
+    // 非待机/拖拽时不走路
     if (this.mood !== 'idle' || this.isDragging) {
       if (this.animation === 'walk') {
         this.animation = 'idle';
@@ -348,28 +395,28 @@ class Pet {
 
     if (this.walkTimer <= 0) {
       const r = Math.random();
-      if (r < 0.4) {
-        // 40% 概率停下来
+      if (r < 0.3) {
+        // 30% 停下来
         this.walkDirection = 0;
         this.animation = 'idle';
         this.vx = 0;
-      } else if (r < 0.7) {
-        // 30% 概率向左走
+      } else if (r < 0.65) {
+        // 35% 向左走
         this.walkDirection = -1;
         this.facingRight = false;
         this.animation = 'walk';
         this.vx = -WALK_SPEED;
       } else {
-        // 30% 概率向右走
+        // 35% 向右走
         this.walkDirection = 1;
         this.facingRight = true;
         this.animation = 'walk';
         this.vx = WALK_SPEED;
       }
-      this.walkTimer = 1000 + Math.random() * 3000;
+      this.walkTimer = 1500 + Math.random() * 3500;
     }
 
-    // 边界检测：走到屏幕边缘就回头
+    // 边界反弹
     if (this.x <= 0) {
       this.walkDirection = 1;
       this.facingRight = true;
@@ -380,6 +427,53 @@ class Pet {
       this.facingRight = false;
       this.vx = -WALK_SPEED;
       this.walkTimer = 1000 + Math.random() * 2000;
+    }
+  }
+
+  /**
+   * 体力系统：走路耗体力
+   */
+  updateEnergy(dt) {
+    if (this.mood === 'resting') {
+      // 休息恢复
+      this.energy += ENERGY_RECOVER_RATE * dt;
+      if (this.energy >= MAX_ENERGY) {
+        this.energy = MAX_ENERGY;
+      }
+      return;
+    }
+
+    if (this.animation === 'walk' && !this.isDragging) {
+      this.energy -= ENERGY_DRAIN_RATE * dt;
+      if (this.energy < 0) {
+        this.energy = 0;
+      }
+    } else if (this.animation !== 'walk') {
+      // 不动时缓慢恢复
+      this.energy += ENERGY_RECOVER_RATE * 0.3 * dt;
+      if (this.energy > MAX_ENERGY) {
+        this.energy = MAX_ENERGY;
+      }
+    }
+  }
+
+  /**
+   * 跑去最近的墙边休息
+   */
+  moveToNearestWall(canvasWidth) {
+    const distToLeft = this.x;
+    const distToRight = canvasWidth - PET_SIZE - this.x;
+
+    if (distToLeft < distToRight) {
+      // 去左墙
+      this.facingRight = false;
+      this.walkDirection = -1;
+      this.restSide = 0;
+    } else {
+      // 去右墙
+      this.facingRight = true;
+      this.walkDirection = 1;
+      this.restSide = 1;
     }
   }
 }
@@ -434,63 +528,60 @@ function render(ctx, pet, canvasWidth, canvasHeight) {
 
 /**
  * 应用重力和地面碰撞
- *
- * @param {import('./pet.js').Pet} pet
- * @param {number} dt — delta time in seconds
- * @param {number} canvasHeight — world height
  */
 function applyGravity(pet, dt, canvasHeight) {
-  // 拖拽时不应用重力（由 input.js 控制位置）
   if (pet.isDragging) return;
 
   const groundY = canvasHeight - PET_SIZE;
 
-  // 重力加速：每秒速度增加 GRAVITY px/s
   pet.vy += GRAVITY * dt;
-
-  // 用速度更新位置
   pet.y += pet.vy * dt;
 
-  // 地面碰撞：穿透了就拉回来
   if (pet.y >= groundY) {
     pet.y = groundY;
     pet.vy = 0;
   }
 }
 
+/**
+ * 限制宠物不能走出屏幕左右边界
+ */
+function clampToScreen(pet, canvasWidth) {
+  if (pet.x < 0) {
+    pet.x = 0;
+  }
+  if (pet.x + PET_SIZE > canvasWidth) {
+    pet.x = canvasWidth - PET_SIZE;
+  }
+}
+
 
 
 /**
- * 每帧调用，根据互动历史更新宠物的情绪状态
+ * 情绪状态机
  *
- * 优先级规则（按顺序检查）：
- *   1. 连续快速点击过多 → 生气（最高优先）
- *   2. 生气冷却时间到 → 恢复待机
- *   3. 刚被点击 → 开心
- *   4. 开心冷却时间到 → 恢复待机
- *   5. 长时间没互动 → 无聊
- *   6. 无聊状态下被互动 → 恢复待机
- *
- * @param {import('./pet.js').Pet} pet
- * @param {number} dt — delta time in seconds
+ * 状态流转：
+ *   idle → (体力耗尽) → resting(靠墙休息) → (体力回满) → idle
+ *   idle → (30s不理) → still(纯苹果不动)
+ *   idle → (点击) → happy → idle
+ *   idle → (连点5次) → angry → idle
+ *   still/resting → (点击) → happy → idle
  */
 function updateMood(pet, dt) {
   const now = Date.now();
 
-  // 清理 3 秒前的点击记录
   pet.clickTimes = pet.clickTimes.filter(t => now - t < CLICK_ANGER_WINDOW);
 
-  // 规则1：连续快速点击过多 → 生气
+  // ── 生气优先 ──
   if (pet.clickTimes.length >= CLICK_ANGER_THRESHOLD && pet.mood !== 'angry') {
     pet.mood = 'angry';
     pet.moodTimer = ANGER_COOLDOWN;
     pet.animation = 'angry';
     pet.frameIndex = 0;
-    pet.walkTimer = 0;
+    pet.vx = 0;
     return;
   }
 
-  // 规则2：生气冷却结束 → 待机
   if (pet.mood === 'angry') {
     pet.moodTimer -= dt * 1000;
     if (pet.moodTimer <= 0) {
@@ -498,12 +589,62 @@ function updateMood(pet, dt) {
       pet.moodTimer = 0;
       pet.animation = 'idle';
       pet.clickTimes = [];
+    }
+    return;
+  }
+
+  // ── 休息状态：走向墙 → 靠墙 → 回体力 → 复活 ──
+  if (pet.mood === 'resting') {
+    const cw = pet._canvasWidth || window.innerWidth;
+    const atLeftWall = pet.x <= 0;
+    const atRightWall = pet.x + PET_SIZE >= cw;
+
+    if (atLeftWall || atRightWall) {
+      // 靠墙休息
+      pet.vx = 0;
+      pet.animation = 'rest';
+      pet.frameIndex = pet.restSide;
+    } else {
+      // 还没到墙，继续走（处理被拖走后重新找墙）
+      pet.restSide = pet.x < cw / 2 ? 0 : 1;
+      pet.facingRight = (pet.restSide === 1);
+      pet.animation = 'walk';
+      pet.vx = (pet.restSide === 0 ? -1 : 1) * WALK_SPEED;
+    }
+
+    // 体力回满就起来
+    if (pet.energy >= MAX_ENERGY) {
+      pet.mood = 'idle';
+      pet.animation = 'idle';
+      pet.frameIndex = 0;
       pet.walkTimer = 0;
     }
     return;
   }
 
-  // 规则3：刚被点击 → 开心
+  // ── 纯苹果状态：完全不动，点一下才醒 ──
+  if (pet.mood === 'still') {
+    // 被点击就醒
+    if (pet.clickTimes.length > 0) {
+      pet.mood = 'happy';
+      pet.moodTimer = HAPPY_COOLDOWN;
+      pet.animation = 'happy';
+      pet.frameIndex = 0;
+    }
+    return;
+  }
+
+  // ── 体力耗尽 → 去休息 ──
+  if (pet.energy <= 0 && pet.mood === 'idle') {
+    pet.mood = 'resting';
+    pet.moveToNearestWall(pet._canvasWidth || window.innerWidth);
+    pet.animation = 'walk';
+    pet.vx = (pet.restSide === 0 ? -1 : 1) * WALK_SPEED;
+    pet.facingRight = (pet.restSide === 1);
+    return;
+  }
+
+  // ── 开心 ──
   if (pet.clickTimes.length > 0 && pet.mood !== 'happy') {
     const lastClick = pet.clickTimes[pet.clickTimes.length - 1];
     if (now - lastClick < 500) {
@@ -511,35 +652,28 @@ function updateMood(pet, dt) {
       pet.moodTimer = HAPPY_COOLDOWN;
       pet.animation = 'happy';
       pet.frameIndex = 0;
-      pet.walkTimer = 0;
+      pet.vx = 0;
       return;
     }
   }
 
-  // 规则4：开心冷却结束 → 待机
   if (pet.mood === 'happy') {
     pet.moodTimer -= dt * 1000;
     if (pet.moodTimer <= 0) {
       pet.mood = 'idle';
       pet.moodTimer = 0;
       pet.animation = 'idle';
-      pet.walkTimer = 0;
     }
     return;
   }
 
-  // 规则5：太久没互动 → 无聊
-  if (now - pet.lastInteractionTime > BORED_TIMEOUT && pet.mood !== 'bored') {
-    pet.mood = 'bored';
-    pet.animation = 'bored';
+  // ── 太久没人理 → 变回纯苹果 ──
+  if (now - pet.lastInteractionTime > BORED_TIMEOUT && pet.mood === 'idle') {
+    pet.mood = 'still';
+    pet.animation = 'still';
     pet.frameIndex = 0;
+    pet.vx = 0;
     return;
-  }
-
-  // 规则6：无聊状态下被互动 → 立刻恢复
-  if (pet.mood === 'bored' && now - pet.lastInteractionTime < 1000) {
-    pet.mood = 'idle';
-    pet.animation = 'idle';
   }
 }
 
@@ -605,11 +739,9 @@ function setupInput(canvas, pet) {
 
 
 
-// 获取 Canvas 和绘制上下文
 const canvas = document.getElementById('pet-canvas');
 const ctx = canvas.getContext('2d');
 
-// 让 Canvas 填满窗口
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight;
@@ -617,30 +749,34 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
-// 创建宠物实例 + 绑定输入
 const pet = new Pet(canvas.width, canvas.height);
 setupInput(canvas, pet);
 
-// 游戏主循环
 let lastTime = 0;
 
 function gameLoop(timestamp) {
-  // delta time（秒）— 距上一帧过了多久，上限 0.1 防止切标签页后瞬移
   const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
   lastTime = timestamp;
 
-  // 情绪状态机
+  // 让状态机能感知屏幕宽度（用于判断是否靠墙）
+  pet._canvasWidth = canvas.width;
+
+  // 情绪 + 体力状态机
   updateMood(pet, dt);
 
   // 更新动画
   pet.updateAnimation(dt);
 
-  // 走路 AI
+  // 走路 AI（idle 状态）
   pet.updateWalk(dt, canvas.width);
 
-  // 更新位置（水平由走路控制，垂直由物理引擎控制）
+  // 体力消耗/恢复
+  pet.updateEnergy(dt);
+
+  // 位置更新
   pet.x += pet.vx * dt;
   applyGravity(pet, dt, canvas.height);
+  clampToScreen(pet, canvas.width);
 
   // 渲染
   render(ctx, pet, canvas.width, canvas.height);
@@ -648,7 +784,6 @@ function gameLoop(timestamp) {
   requestAnimationFrame(gameLoop);
 }
 
-// 启动循环
 requestAnimationFrame(gameLoop);
 
 

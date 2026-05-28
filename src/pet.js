@@ -1,6 +1,5 @@
 import {
   WALK_SPEED,
-  WALK_CHANGE_INTERVAL,
   BLINK_INTERVAL_MIN,
   BLINK_INTERVAL_MAX,
   BLINK_DURATION,
@@ -8,6 +7,10 @@ import {
   IDLE_FLOAT_PERIOD,
   IDLE_FLOAT_AMPLITUDE,
   FRAME_DURATION,
+  MAX_ENERGY,
+  ENERGY_DRAIN_RATE,
+  ENERGY_RECOVER_RATE,
+  ENERGY_LOW_THRESHOLD,
 } from './constants.js';
 
 export class Pet {
@@ -18,13 +21,13 @@ export class Pet {
     this.vy = 0;
 
     // Animation
-    this.animation = 'idle';       // 'idle' | 'walk' | 'blink' | 'happy' | 'angry' | 'bored'
+    this.animation = 'idle';
     this.frameIndex = 0;
     this.frameTimer = 0;
     this.facingRight = true;
 
     // Walk AI
-    this.walkDirection = 0;        // -1 left, 0 still, 1 right
+    this.walkDirection = 0;
     this.walkTimer = 0;
 
     // Blink
@@ -32,10 +35,10 @@ export class Pet {
       + Math.random() * (BLINK_INTERVAL_MAX - BLINK_INTERVAL_MIN);
     this.isBlinking = false;
 
-    // Mood
-    this.mood = 'idle';            // 'idle' | 'happy' | 'angry' | 'bored'
+    // Mood: 'idle' | 'happy' | 'angry' | 'resting' | 'still'
+    this.mood = 'idle';
     this.moodTimer = 0;
-    this.clickTimes = [];          // 记录最近的点击时间戳
+    this.clickTimes = [];
     this.lastInteractionTime = Date.now();
 
     // Drag state
@@ -45,14 +48,17 @@ export class Pet {
 
     // Idle float
     this.floatOffset = 0;
+
+    // Energy system
+    this.energy = MAX_ENERGY;
+    this.restSide = 0; // 0=左墙, 1=右墙
   }
 
   /**
    * 更新动画状态和帧
-   * @param {number} dt — delta time in seconds
    */
   updateAnimation(dt) {
-    // 待机浮动：用 sin 波做上下浮动
+    // 纯苹果和休息状态不需要浮动
     if (this.animation === 'idle') {
       this.floatOffset = Math.sin(Date.now() / (IDLE_FLOAT_PERIOD / (Math.PI * 2)))
         * IDLE_FLOAT_AMPLITUDE;
@@ -60,7 +66,11 @@ export class Pet {
       this.floatOffset = 0;
     }
 
-    // 眨眼计时器
+    // 休息和纯苹果状态不眨眼
+    if (this.mood === 'resting' || this.mood === 'still') {
+      return;
+    }
+
     if (this.isBlinking) {
       this.blinkTimer -= dt * 1000;
       if (this.blinkTimer <= 0) {
@@ -78,22 +88,18 @@ export class Pet {
       }
     }
 
-    // 帧切换
     this.frameTimer += dt * 1000;
-    const duration = FRAME_DURATION;
-    if (this.frameTimer >= duration) {
-      this.frameTimer -= duration;
+    if (this.frameTimer >= FRAME_DURATION) {
+      this.frameTimer -= FRAME_DURATION;
       this.frameIndex++;
     }
   }
 
   /**
    * 走路 AI：随机改变方向和状态
-   * @param {number} dt — delta time in seconds
-   * @param {number} canvasWidth — world width
    */
   updateWalk(dt, canvasWidth) {
-    // 非待机状态或正在拖拽时，不走路
+    // 非待机/拖拽时不走路
     if (this.mood !== 'idle' || this.isDragging) {
       if (this.animation === 'walk') {
         this.animation = 'idle';
@@ -106,28 +112,28 @@ export class Pet {
 
     if (this.walkTimer <= 0) {
       const r = Math.random();
-      if (r < 0.4) {
-        // 40% 概率停下来
+      if (r < 0.3) {
+        // 30% 停下来
         this.walkDirection = 0;
         this.animation = 'idle';
         this.vx = 0;
-      } else if (r < 0.7) {
-        // 30% 概率向左走
+      } else if (r < 0.65) {
+        // 35% 向左走
         this.walkDirection = -1;
         this.facingRight = false;
         this.animation = 'walk';
         this.vx = -WALK_SPEED;
       } else {
-        // 30% 概率向右走
+        // 35% 向右走
         this.walkDirection = 1;
         this.facingRight = true;
         this.animation = 'walk';
         this.vx = WALK_SPEED;
       }
-      this.walkTimer = 1000 + Math.random() * 3000;
+      this.walkTimer = 1500 + Math.random() * 3500;
     }
 
-    // 边界检测：走到屏幕边缘就回头
+    // 边界反弹
     if (this.x <= 0) {
       this.walkDirection = 1;
       this.facingRight = true;
@@ -138,6 +144,53 @@ export class Pet {
       this.facingRight = false;
       this.vx = -WALK_SPEED;
       this.walkTimer = 1000 + Math.random() * 2000;
+    }
+  }
+
+  /**
+   * 体力系统：走路耗体力
+   */
+  updateEnergy(dt) {
+    if (this.mood === 'resting') {
+      // 休息恢复
+      this.energy += ENERGY_RECOVER_RATE * dt;
+      if (this.energy >= MAX_ENERGY) {
+        this.energy = MAX_ENERGY;
+      }
+      return;
+    }
+
+    if (this.animation === 'walk' && !this.isDragging) {
+      this.energy -= ENERGY_DRAIN_RATE * dt;
+      if (this.energy < 0) {
+        this.energy = 0;
+      }
+    } else if (this.animation !== 'walk') {
+      // 不动时缓慢恢复
+      this.energy += ENERGY_RECOVER_RATE * 0.3 * dt;
+      if (this.energy > MAX_ENERGY) {
+        this.energy = MAX_ENERGY;
+      }
+    }
+  }
+
+  /**
+   * 跑去最近的墙边休息
+   */
+  moveToNearestWall(canvasWidth) {
+    const distToLeft = this.x;
+    const distToRight = canvasWidth - PET_SIZE - this.x;
+
+    if (distToLeft < distToRight) {
+      // 去左墙
+      this.facingRight = false;
+      this.walkDirection = -1;
+      this.restSide = 0;
+    } else {
+      // 去右墙
+      this.facingRight = true;
+      this.walkDirection = 1;
+      this.restSide = 1;
     }
   }
 }
