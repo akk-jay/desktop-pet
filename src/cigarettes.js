@@ -15,6 +15,9 @@ import {
   CIGARETTE_SPIN_MAX,
   CANVAS_H,
   PET_SIZE,
+  PET_SCALE,
+  PET_PIXEL_SIZE,
+  PET_BOX_TOP,
   IDLE_FLOAT_AMPLITUDE,
 } from './constants.js';
 import { CIGARETTE_SPRITE, COLORS } from './sprites.js';
@@ -129,5 +132,82 @@ export function renderCigarette(ctx, c) {
 export function renderCigarettes(ctx, cigarettes) {
   for (const c of cigarettes) {
     renderCigarette(ctx, c);
+  }
+}
+
+// ── 抽烟烟雾粒子 ──
+
+const SMOKE_MAX = 40;
+const SMOKE_LIFESPAN = 1200;   // ms
+const SMOKE_EMIT_INTERVAL = 150; // ms — 多久喷一口烟
+
+let _smokeEmitAccum = 0;
+
+/**
+ * 从烟头位置喷出烟雾粒子
+ */
+export function emitSmokePuff(smokeParticles, pet) {
+  if (smokeParticles.length >= SMOKE_MAX) return;
+
+  // 烟头在精灵中的像素位置：row 9, col 14（朝右时）
+  const emberSpriteCol = 14;
+  const emberSpriteRow = 9;
+  const canvasY = PET_BOX_TOP + IDLE_FLOAT_AMPLITUDE + emberSpriteRow * PET_SCALE + (pet.floatOffset || 0);
+  const canvasX = pet.facingRight
+    ? emberSpriteCol * PET_SCALE
+    : (PET_PIXEL_SIZE - 1 - emberSpriteCol) * PET_SCALE;
+
+  const count = 1 + Math.floor(Math.random() * 2);
+  for (let i = 0; i < count; i++) {
+    smokeParticles.push({
+      x: canvasX + (Math.random() - 0.5) * 4,
+      y: canvasY + (Math.random() - 0.5) * 2,
+      vx: (Math.random() - 0.5) * 6,
+      vy: -12 - Math.random() * 15,
+      life: SMOKE_LIFESPAN,
+      maxLife: SMOKE_LIFESPAN,
+      size: 1.5 + Math.random() * 2.5,
+    });
+  }
+}
+
+/**
+ * 抽烟时自动定时喷烟
+ */
+export function updateSmokeEmitter(smokeParticles, pet, dt) {
+  _smokeEmitAccum += dt * 1000;
+  while (_smokeEmitAccum >= SMOKE_EMIT_INTERVAL) {
+    _smokeEmitAccum -= SMOKE_EMIT_INTERVAL;
+    emitSmokePuff(smokeParticles, pet);
+  }
+}
+
+/**
+ * 更新烟雾粒子（上升 + 扩散 + 消隐）
+ */
+export function updateSmoke(smoke, dt) {
+  for (let i = smoke.length - 1; i >= 0; i--) {
+    const s = smoke[i];
+    s.life -= dt * 1000;
+    if (s.life <= 0) {
+      smoke.splice(i, 1);
+      continue;
+    }
+    s.x += s.vx * dt;
+    s.y += s.vy * dt;
+    s.size += dt * 5; // 扩散变大
+  }
+}
+
+/**
+ * 渲染烟雾粒子（灰色半透明圆）
+ */
+export function renderSmoke(ctx, smoke) {
+  for (const s of smoke) {
+    const alpha = Math.max(0, s.life / s.maxLife) * 0.4;
+    ctx.fillStyle = `rgba(180,180,180,${alpha})`;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+    ctx.fill();
   }
 }

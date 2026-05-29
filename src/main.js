@@ -3,7 +3,13 @@ import { render } from './renderer.js';
 import { applyGravity, clampToScreen } from './physics.js';
 import { setupInput } from './input.js';
 import { updateMood } from './state.js';
-import { ejectCigarette, updateCigarettes } from './cigarettes.js';
+import {
+  ejectCigarette,
+  updateCigarettes,
+  updateSmokeEmitter,
+  updateSmoke,
+  renderSmoke,
+} from './cigarettes.js';
 import { IDLE_FLOAT_AMPLITUDE, CANVAS_W, CANVAS_H, PET_BOX_TOP } from './constants.js';
 
 const canvas = document.getElementById('pet-canvas');
@@ -30,6 +36,7 @@ async function initScreenBounds() {
 
 const pet = new Pet(screenW, screenH);
 const cigarettes = [];
+const smokeParticles = [];
 setupInput(canvas, pet);
 
 let lastTime = 0;
@@ -51,8 +58,14 @@ function gameLoop(timestamp) {
     ejectCigarette(cigarettes, pet);
   }
 
-  // 更新烟粒子
+  // 抽烟时持续喷烟雾
+  if (pet._smokeTimer > 0) {
+    updateSmokeEmitter(smokeParticles, pet, dt);
+  }
+
+  // 更新粒子
   updateCigarettes(cigarettes, dt, CANVAS_W, CANVAS_H);
+  updateSmoke(smokeParticles, dt);
 
   pet.x += pet.vx * dt;
   applyGravity(pet, dt, screenH);
@@ -62,7 +75,9 @@ function gameLoop(timestamp) {
     window.petAPI.updatePosition(pet.x, pet.y - PET_BOX_TOP - IDLE_FLOAT_AMPLITUDE);
   }
 
+  // 渲染：先烟和烟雾，再烟盒本体
   render(ctx, pet, cigarettes, CANVAS_W, CANVAS_H);
+  renderSmoke(ctx, smokeParticles);
 
   requestAnimationFrame(gameLoop);
 }
