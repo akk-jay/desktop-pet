@@ -58,7 +58,6 @@ export class Pet {
    * 更新动画状态和帧
    */
   updateAnimation(dt) {
-    // 纯苹果和休息状态不需要浮动
     if (this.animation === 'idle') {
       this.floatOffset = Math.sin(Date.now() / (IDLE_FLOAT_PERIOD / (Math.PI * 2)))
         * IDLE_FLOAT_AMPLITUDE;
@@ -66,8 +65,20 @@ export class Pet {
       this.floatOffset = 0;
     }
 
-    // 休息和纯苹果状态不眨眼
-    if (this.mood === 'resting' || this.mood === 'still') {
+    // 抽烟计时器
+    if (this._smokeTimer > 0) {
+      this._smokeTimer -= dt * 1000;
+      if (this._smokeTimer <= 0) {
+        this._smokeTimer = 0;
+        if (this.animation === 'smoke') {
+          this.animation = 'idle';
+          this.frameIndex = 0;
+        }
+      }
+    }
+
+    // 抽烟和休息/纯苹果时跳过眨眼
+    if (this.animation === 'smoke' || this.mood === 'resting' || this.mood === 'still') {
       return;
     }
 
@@ -99,8 +110,8 @@ export class Pet {
    * 走路 AI：随机改变方向和状态
    */
   updateWalk(dt, canvasWidth) {
-    // 非待机/拖拽时不走路
-    if (this.mood !== 'idle' || this.isDragging) {
+    // 非待机/拖拽/抽烟时不走路
+    if (this.mood !== 'idle' || this.isDragging || this._smokeTimer > 0) {
       if (this.animation === 'walk') {
         this.animation = 'idle';
         this.vx = 0;

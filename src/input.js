@@ -20,6 +20,7 @@ export function setupInput(canvas, pet) {
   pet._mouseDown = false;
   pet._dragStarted = false;
   pet._ejectRequest = false;
+  pet._smokeTimer = 0;
 
   canvas.addEventListener('mousedown', (e) => {
     const rect = canvas.getBoundingClientRect();
@@ -33,7 +34,8 @@ export function setupInput(canvas, pet) {
       pet._dragStartSY = e.screenY;
       pet.dragOffsetX = e.screenX - pet.x;
       pet.dragOffsetY = e.screenY - pet.y;
-      pet._ejectRequest = true; // 点击弹烟
+      pet._ejectRequest = true;
+      pet.vy = -120;
 
       pet.clickTimes.push(Date.now());
       const cutoff = Date.now() - 3000;
@@ -42,6 +44,22 @@ export function setupInput(canvas, pet) {
       pet.lastInteractionTime = Date.now();
 
       if (window.petAPI) window.petAPI.interactionStart();
+    }
+  });
+
+  // 右键：点火抽烟
+  canvas.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    if (isInsidePet(mx, my, pet)) {
+      pet._smokeTimer = 3000;
+      pet.animation = 'smoke';
+      pet.frameIndex = 0;
+      pet.vx = 0;
+      pet.lastInteractionTime = Date.now();
     }
   });
 
@@ -65,8 +83,10 @@ export function setupInput(canvas, pet) {
   });
 
   window.addEventListener('mouseup', () => {
-    if (pet._mouseDown && pet._dragStarted) {
-      pet.isDragging = false;
+    if (pet._mouseDown) {
+      if (pet._dragStarted) {
+        pet.isDragging = false;
+      }
       if (window.petAPI) window.petAPI.interactionEnd();
     }
     pet._mouseDown = false;
