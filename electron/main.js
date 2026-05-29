@@ -10,7 +10,10 @@ let screenWidth = 1920;
 let screenHeight = 1080;
 
 const WINDOW_W = 70;
-const WINDOW_H = 70;
+const WINDOW_H = 250;
+const PET_BOX_H = 64;  // 烟盒本体高度在窗口底部
+let pollTimer = null;
+let mouseInside = false;
 
 function updateScreenBounds() {
   const display = screen.getPrimaryDisplay();
@@ -24,7 +27,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: WINDOW_W,
     height: WINDOW_H,
-    x: Math.round(screenWidth / 2) - 35,
+    x: Math.round(screenWidth / 2) - Math.round(WINDOW_W / 2),
     y: screenHeight - WINDOW_H,
     frame: false,
     transparent: true,
@@ -52,6 +55,7 @@ function createWindow() {
       width: screenWidth,
       height: screenHeight,
     });
+    startMousePolling();
   });
 
   screen.on('display-metrics-changed', () => {
@@ -65,11 +69,31 @@ function createWindow() {
   });
 }
 
+function startMousePolling() {
+  pollTimer = setInterval(() => {
+    if (!mainWindow || isInteracting) return;
+
+    const cursor = screen.getCursorScreenPoint();
+    const bounds = mainWindow.getBounds();
+
+    const inBox =
+      cursor.x >= bounds.x &&
+      cursor.x < bounds.x + WINDOW_W &&
+      cursor.y >= bounds.y + WINDOW_H - PET_BOX_H &&
+      cursor.y < bounds.y + WINDOW_H;
+
+    if (inBox !== mouseInside) {
+      mouseInside = inBox;
+      mainWindow.setIgnoreMouseEvents(!inBox, { forward: true });
+    }
+  }, 33);
+}
+
 function createTray() {
   const iconPath = path.join(__dirname, '..', 'assets', 'tray-icon.png');
   try {
     tray = new Tray(iconPath);
-    tray.setToolTip('桌面宠物 - 青苹果');
+    tray.setToolTip('桌面宠物 - 烟盒');
     tray.setContextMenu(Menu.buildFromTemplate([
       { label: '退出', click: () => app.quit() },
     ]));
@@ -95,6 +119,10 @@ ipcMain.on('pet-position', (_event, { x, y }) => {
 
 ipcMain.on('interaction-start', () => {
   isInteracting = true;
+  // 拖拽时确保事件被捕获
+  if (mainWindow && mouseInside) {
+    mainWindow.setIgnoreMouseEvents(false);
+  }
 });
 
 ipcMain.on('interaction-end', () => {
@@ -107,6 +135,8 @@ ipcMain.on('interaction-end', () => {
       height: WINDOW_H,
     });
   }
+  // 让下一次轮询重新判断
+  mouseInside = false;
 });
 
 ipcMain.handle('get-screen-bounds', () => {
@@ -126,4 +156,8 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+app.on('before-quit', () => {
+  if (pollTimer) clearInterval(pollTimer);
 });

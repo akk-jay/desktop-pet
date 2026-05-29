@@ -1,10 +1,10 @@
-import { PET_SIZE, IDLE_FLOAT_AMPLITUDE } from './constants.js';
+import { PET_SIZE, IDLE_FLOAT_AMPLITUDE, PET_BOX_TOP } from './constants.js';
 
-const DRAG_THRESHOLD = 5; // 鼠标移动超过 5px 才进入拖拽
+const DRAG_THRESHOLD = 5;
 
 function isInsidePet(px, py, pet) {
   const spriteX = 0;
-  const spriteY = IDLE_FLOAT_AMPLITUDE + (pet.floatOffset || 0);
+  const spriteY = PET_BOX_TOP + IDLE_FLOAT_AMPLITUDE + (pet.floatOffset || 0);
   const spriteW = PET_SIZE;
   const spriteH = PET_SIZE;
 
@@ -19,6 +19,7 @@ function isInsidePet(px, py, pet) {
 export function setupInput(canvas, pet) {
   pet._mouseDown = false;
   pet._dragStarted = false;
+  pet._ejectRequest = false;
 
   canvas.addEventListener('mousedown', (e) => {
     const rect = canvas.getBoundingClientRect();
@@ -32,13 +33,15 @@ export function setupInput(canvas, pet) {
       pet._dragStartSY = e.screenY;
       pet.dragOffsetX = e.screenX - pet.x;
       pet.dragOffsetY = e.screenY - pet.y;
-      pet.vy = -150;
+      pet._ejectRequest = true; // 点击弹烟
 
       pet.clickTimes.push(Date.now());
       const cutoff = Date.now() - 3000;
       pet.clickTimes = pet.clickTimes.filter(t => t > cutoff);
 
       pet.lastInteractionTime = Date.now();
+
+      if (window.petAPI) window.petAPI.interactionStart();
     }
   });
 
@@ -51,14 +54,13 @@ export function setupInput(canvas, pet) {
       if (Math.abs(dx) < DRAG_THRESHOLD && Math.abs(dy) < DRAG_THRESHOLD) return;
       pet._dragStarted = true;
       pet.isDragging = true;
-      if (window.petAPI) window.petAPI.interactionStart();
     }
 
     pet.x = e.screenX - pet.dragOffsetX;
     pet.y = e.screenY - pet.dragOffsetY;
 
     if (window.petAPI) {
-      window.petAPI.updatePosition(pet.x, pet.y - IDLE_FLOAT_AMPLITUDE);
+      window.petAPI.updatePosition(pet.x, pet.y - PET_BOX_TOP - IDLE_FLOAT_AMPLITUDE);
     }
   });
 

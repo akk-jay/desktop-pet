@@ -33,3 +33,24 @@ export const MAX_ENERGY = 100;           // 最大体力值
 export const ENERGY_DRAIN_RATE = 8;      // 每秒走路消耗的体力
 export const ENERGY_RECOVER_RATE = 15;   // 每秒休息恢复的体力
 export const ENERGY_LOW_THRESHOLD = 0;   // 体力低于此值进入休息
+
+// Canvas / Window (Electron)
+export const CANVAS_W = 70;              // 窗口宽度
+export const CANVAS_H = 250;             // 窗口高度（烟盒在底部，上面是烟的飞行空间）
+export const PET_BOX_TOP = CANVAS_H - PET_SIZE; // 烟盒在 canvas 中的 Y 起点 = 186
+
+// Cigarette particle system
+export const CIGARETTE_GRAVITY = 280;    // px/s² — 烟的下落加速度
+export const CIGARETTE_LIFESPAN = 4000;  // ms — 烟落地后多久消失
+export const CIGARETTE_MAX = 12;         // 最多同时存在的烟
+export const CIGARETTE_PX_W = 4;         // 烟的像素宽度
+export const CIGARETTE_PX_H = 12;        // 烟的像素高度
+export const CIGARETTE_SCALE = 2;        // 烟的渲染放大倍数
+export const CIGARETTE_EXIT_X = 34;      // 烟弹出点 X（canvas 本地）
+export const CIGARETTE_EXIT_Y = 182;     // 烟弹出点 Y（canvas 本地，盒盖处）
+export const CIGARETTE_SPEED_X_MIN = -60;  // 水平弹射速度范围
+export const CIGARETTE_SPEED_X_MAX = 60;
+export const CIGARETTE_SPEED_Y_MIN = -320; // 垂直弹射速度范围（向上）
+export const CIGARETTE_SPEED_Y_MAX = -200;
+export const CIGARETTE_SPIN_MIN = -8;    // 旋转速度范围（弧度/s）
+export const CIGARETTE_SPIN_MAX = 8;

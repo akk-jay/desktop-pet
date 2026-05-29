@@ -3,13 +3,12 @@ import { render } from './renderer.js';
 import { applyGravity, clampToScreen } from './physics.js';
 import { setupInput } from './input.js';
 import { updateMood } from './state.js';
-import { IDLE_FLOAT_AMPLITUDE } from './constants.js';
+import { ejectCigarette, updateCigarettes } from './cigarettes.js';
+import { IDLE_FLOAT_AMPLITUDE, CANVAS_W, CANVAS_H, PET_BOX_TOP } from './constants.js';
 
 const canvas = document.getElementById('pet-canvas');
 const ctx = canvas.getContext('2d');
 
-const CANVAS_W = 70;
-const CANVAS_H = 70;
 canvas.width = CANVAS_W;
 canvas.height = CANVAS_H;
 
@@ -30,6 +29,7 @@ async function initScreenBounds() {
 }
 
 const pet = new Pet(screenW, screenH);
+const cigarettes = [];
 setupInput(canvas, pet);
 
 let lastTime = 0;
@@ -45,15 +45,24 @@ function gameLoop(timestamp) {
   pet.updateWalk(dt, screenW);
   pet.updateEnergy(dt);
 
+  // 点击弹烟
+  if (pet._ejectRequest) {
+    pet._ejectRequest = false;
+    ejectCigarette(cigarettes, pet);
+  }
+
+  // 更新烟粒子
+  updateCigarettes(cigarettes, dt, CANVAS_W, CANVAS_H);
+
   pet.x += pet.vx * dt;
   applyGravity(pet, dt, screenH);
   clampToScreen(pet, screenW);
 
   if (window.petAPI) {
-    window.petAPI.updatePosition(pet.x, pet.y - IDLE_FLOAT_AMPLITUDE);
+    window.petAPI.updatePosition(pet.x, pet.y - PET_BOX_TOP - IDLE_FLOAT_AMPLITUDE);
   }
 
-  render(ctx, pet, CANVAS_W, CANVAS_H);
+  render(ctx, pet, cigarettes, CANVAS_W, CANVAS_H);
 
   requestAnimationFrame(gameLoop);
 }
