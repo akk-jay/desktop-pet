@@ -55,7 +55,7 @@ export function setupInput(canvas, pet) {
     const my = e.clientY - rect.top;
 
     if (isInsidePet(mx, my, pet)) {
-      pet._smokeTimer = 3000;
+      pet._smokeTimer = 30000;
       pet.animation = 'smoke';
       pet.frameIndex = 0;
       pet.vx = 0;
